@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards Interactivas</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1d1f27;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            width: 95%;
+            max-width: 800px;
+            text-align: center;
+            background-color: #282c34;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            padding: 20px;
+        }
+        .flashcard {
+            width: 100%;
+            height: 60vh;
+            max-height: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+        .flashcard-inner.flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .flashcard-content.front {
+            background-color: #4caf50;
+            color: white;
+        }
+        .flashcard-content.back {
+            background-color: #ffc107;
+            color: #333;
+            transform: rotateY(180deg);
+        }
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            flex: 1;
+            margin: 5px;
+            max-width: 120px;
+        }
+        button:disabled {
+            background-color: #999999;
+            cursor: not-allowed;
+        }
+        button:hover:enabled {
+            background-color: #0056b3;
+        }
+
+        /* Media Queries para Responsividad */
+        @media (max-width: 768px) {
+            .flashcard {
+                height: 50vh;
+                max-height: 70%;
+            }
+            .flashcard-content {
+                padding: 15px;
+            }
+            button {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .flashcard {
+                height: 40vh;
+                max-height: 60%;
+            }
+            .flashcard-content {
+                padding: 10px;
+            }
+            button {
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="flashcardContainer">
+    <h1>Flashcards Interactivas</h1>
+    <button id="startButton" onclick="startFlashcards()">Iniciar Flashcards</button>
+    <div id="flashcard" class="flashcard" style="display:none;">
+        <div class="flashcard-inner">
+            <div class="flashcard-content front"></div>
+            <div class="flashcard-content back"></div>
+        </div>
+    </div>
+    <div class="controls" style="display:none;">
+        <button onclick="prevFlashcard()">Anterior</button>
+        <button onclick="nextFlashcard()">Siguiente</button>
+    </div>
+</div>
+
+<script>
+    // Flashcards importadas directamente del CSV
+    const flashcards =[
+    {"question": "¿Qué es un antígeno y qué puede suceder cuando el sistema inmunitario lo reconoce, pero no siempre induce una respuesta inmunitaria activa?", "answer": "Sustancia reconocida por el sistema inmune; no siempre provoca respuesta activa."},
+    {"question": "¿Qué diferencia a un inmunógeno de un antígeno en términos de la respuesta inmunitaria que desencadena?", "answer": "Induce respuesta inmunitaria activa (activación de células o producción de anticuerpos)."},
+    {"question": "¿Cómo se define un alérgeno en el contexto de la respuesta inmunitaria, y en qué tipo de personas causa una reacción exagerada o inapropiada?", "answer": "Antígeno que causa respuesta exagerada en personas sensibles."},
+    {"question": "¿Qué factores determinan la inmunogenicidad de una sustancia en términos de su interacción con el sistema inmunitario del hospedador?", "answer": "Naturaleza química, complejidad estructural, ateridad, variabilidad del hospedador."},
+    {"question": "¿Cuáles son los factores que afectan la respuesta inmunitaria en individuos, y cómo influye la vía de administración del inmunógeno en la respuesta inmunitaria?", "answer": "Genética, edad, dosis, vía de administración (oral/sublingual para tolerancia; intramuscular/intravenosa para respuesta fuerte)."},
+    {"question": "¿Qué vías de administración son preferibles para inducir tolerancia inmunitaria, y cuáles se utilizan para generar una respuesta inmunitaria fuerte?", "answer": "Oral/sublingual para tolerancia; intramuscular/intravenosa para respuesta fuerte."},
+    {"question": "¿Cuáles son los tipos de grasas más saludables para la salud cardiovascular y cuáles deben evitarse por su impacto negativo?", "answer": "Insaturadas son saludables; trans deben evitarse."},
+    {"question": "¿Cómo puede una dieta rica en grasas saturadas afectar la oxidación de LDL y contribuir a enfermedades cardiovasculares?", "answer": "Aumenta oxidación de LDL, depósitos en vasos, formación de placas."},
+    {"question": "¿Qué son los Productos de Glicación Avanzada (AGEs) y a qué tipos de enfermedades están comúnmente asociados?", "answer": "Compuestos de azúcares con proteínas/lípidos; asociados a envejecimiento y enfermedades crónicas."},
+    {"question": "¿Cuál es el propósito de los adyuvantes en las vacunas y qué ejemplos comunes existen?", "answer": "Mejoran respuesta inmunitaria; ejemplos: sales de aluminio, adyuvante de Freund."},
+    {"question": "¿Qué son los haptenos y por qué son relevantes en alergias y el desarrollo de vacunas?", "answer": "Moléculas que requieren proteína portadora; relevantes en alergias y vacunas."},
+    {"question": "¿Qué son los superantígenos y qué tipo de respuestas inmunitarias pueden desencadenar, incluyendo posibles peligros?", "answer": "Proteínas que causan activación masiva de linfocitos T; posibles respuestas peligrosas."},
+    {"question": "¿Qué es la reactividad cruzada y cómo puede afectar a personas con alergias al exponerse a diferentes alérgenos?", "answer": "Anticuerpo reconoce epítopos similares en diferentes alérgenos."},
+    {"question": "¿Qué factores influyen en la predisposición a desarrollar alergias y cómo contribuyen al desarrollo de estas?", "answer": "Factores genéticos (respuesta TH2, IgE) y exposición ambiental."},
+    {"question": "¿Qué caracteriza a la respuesta inmunitaria TH2 y contra qué tipo de patógenos está dirigida?", "answer": "Mediada por células T CD4+ (TH2), defensa contra patógenos extracelulares."},
+    {"question": "¿Cómo está relacionado el predominio de la respuesta TH2 con las enfermedades alérgicas y cuáles son algunos ejemplos?", "answer": "Activación exagerada de células e IgE, causa asma y dermatitis atópica."},
+    {"question": "¿Qué son las leches hidrolizadas y cómo ayudan a reducir el riesgo de alergias en bebés?", "answer": "Leches con proteínas descompuestas; facilitan digestión y reducen alergias."},
+    {"question": "¿Qué es un nicho medular en la médula ósea y qué función tiene?", "answer": "Agrupación celular que nutre células madre hematopoyéticas con citoquinas."},
+    {"question": "¿Qué función tiene la Interleucina-3 (IL-3) en la hematopoyesis?", "answer": "Promueve diferenciación hacia linajes mieloides."},
+    {"question": "¿Cuál es la función de la Interleucina-7 (IL-7) en el desarrollo del sistema inmunitario?", "answer": "Crucial para la diferenciación de linajes linfoides, T y B."},
+    {"question": "¿Qué es un hematón y para qué se utiliza en estudios de hematopoyesis?", "answer": "Estructura in vitro que simula el nicho medular."},
+    {"question": "¿Qué ocurre en la corteza del timo con los linfocitos T inmaduros (timocitos) y por qué es importante?", "answer": "Experimentan selección positiva; asegura reconocimiento de MHC propio."},
+    {"question": "¿Qué es la unión corticomedular en el timo y qué proceso ocurre allí?", "answer": "Área de transición donde los timocitos inician la selección negativa."},
+    {"question": "¿Qué sucede en la médula del timo con los linfocitos T durante su maduración?", "answer": "Completa selección negativa y diferencia en linfocitos T maduros."},
+    {"question": "¿Qué efecto tienen las mutaciones en TLR3 en la respuesta inmunitaria contra infecciones virales como la encefalitis por HSV-1?", "answer": "Aumentan la susceptibilidad a infecciones virales al impedir una respuesta antiviral eficaz."},
+    {"question": "¿Cómo se relaciona la deficiencia de NOD2 con la enfermedad de Crohn?", "answer": "Aumenta el riesgo de enfermedad de Crohn por una respuesta inflamatoria inadecuada en el intestino."},
+    {"question": "¿Qué es el Síndrome de Respuesta Inflamatoria Sistémica (SIRS)/sepsis y qué riesgos implica?", "answer": "Inflamación desregulada por infección grave; riesgo de daño multiorgánico y falla circulatoria."},
+{"question": "¿Cómo está relacionada la aterosclerosis con la activación de inflamasomas, y qué inflamasoma es un objetivo emergente de tratamiento?", "answer": "Inflamasomas NLRP3 contribuyen a la formación de placas ateroscleróticas."},
+    {"question": "¿Cómo afecta el VIH al sistema inmunitario y por qué es importante el monitoreo de los linfocitos T CD4+?", "answer": "Destruye linfocitos T CD4+, debilitando la inmunidad; monitoreo clave para el tratamiento."},
+    {"question": "¿Qué función tiene la pulpa blanca del bazo y qué tipo de linfocitos se encuentran en la capa linfoide periarteriolar (PALS)?", "answer": "Contiene linfocitos T alrededor de arterias esplénicas."},
+    {"question": "¿Qué tipo de linfocitos se encuentran en la zona marginal del bazo y cómo se organizan?", "answer": "Linfocitos B, organizados en folículos linfoides."},
+    {"question": "¿Qué función cumple la pulpa roja del bazo en la circulación sanguínea?", "answer": "Filtra eritrocitos envejecidos y recicla hierro."},
+    {"question": "¿Cómo contribuyen los adipocitos hipertrofiados en la obesidad a una enfermedad inflamatoria crónica de bajo grado?", "answer": "Liberan ácidos grasos y activan macrófagos, aumentando inflamación por grasa visceral."},
+    {"question": "¿Qué es MALT y cómo se dividen sus sitios en las mucosas?", "answer": "Tejido linfoide en mucosas, dividido en sitios inductores y efectores."},
+    {"question": "¿Qué ocurre en los sitios inductores del MALT, como las placas de Peyer, durante la respuesta inmunitaria?", "answer": "Capturan antígenos y activan células inmunitarias."},
+    {"question": "¿Cuál es el papel de los sitios efectores del MALT en la defensa inmunitaria de las mucosas?", "answer": "Producen y secretan anticuerpos, como IgA, en mucosas."},
+    {"question": "¿Qué función tienen las células Natural Killer (NK) en la respuesta inmunitaria innata contra infecciones virales y células tumorales?", "answer": "Inducen apoptosis en células diana mediante perforinas y granzimas."},
+    {"question": "¿Cuál es el papel de las células NK uterinas durante el embarazo?", "answer": "Facilitan la implantación y remodelación de vasos sanguíneos."},
+    {"question": "¿Qué funciones desempeñan los macrófagos en la respuesta inmunitaria?", "answer": "Eliminan bacterias, células muertas y desechos celulares."},
+    {"question": "¿Qué tipo de microorganismos son fagocitados por los neutrófilos?", "answer": "Bacterias y hongos."},
+    {"question": "¿Qué células del sistema inmunitario son las primeras en llegar al sitio de infección?", "answer": "Neutrófilos."},
+    {"question": "¿Qué función desempeñan los eosinófilos en infecciones parasitarias y reacciones alérgicas?", "answer": "Combaten parásitos y liberan enzimas tóxicas; elevación indica parasitosis o alergia."},
+{"question": "¿Cómo contribuyen los basófilos a las respuestas alérgicas y a la inflamación?", "answer": "Liberan histamina y mediadores químicos que intensifican estos procesos."},
+    {"question": "¿Qué rol juegan los mastocitos en las reacciones alérgicas y anafilaxia?", "answer": "Liberan histamina y mediadores inflamatorios, causando vasodilatación."},
+    {"question": "¿Qué es la anafilaxia y qué células están implicadas en esta reacción?", "answer": "Alergia mortal que involucra mastocitos y basófilos."},
+    {"question": "¿Qué es una alergia y qué mediador y células están implicados en esta reacción?", "answer": "Hipersensibilidad tipo I mediada por IgE que activa mastocitos."},
+    {"question": "¿Cuáles son los cuatro tipos de hipersensibilidad y qué los caracteriza?", "answer": "Tipo I (IgE, rápida), II (IgG/IgM, citotóxica), III (inmunocomplejos), IV (células T, retardada)."},
+    {"question": "¿Cómo se diagnostica la anafilaxia y qué pruebas son esenciales?", "answer": "Mide triptasa sérica y correlaciona exposición a alérgenos con síntomas."},
+    {"question": "¿Qué pueden simular los síntomas de angioedema y urticaria no alérgicos, y qué tratamientos específicos requieren?", "answer": "Pueden simular alergias, tratados con icatibant o C1-inhibidor en caso de deficiencias del complemento."},
+    {"question": "¿Cuándo podrían no ser efectivos los antihistamínicos y corticoides en una reacción alérgica, y qué puede indicar esto?", "answer": "Cuando la reacción no es mediada por histamina; sugiere necesidad de otras investigaciones."},
+    {"question": "¿Con qué células siempre se asocia la anafilaxis?", "answer": "Mastocitos."},
+    {"question": "¿Por qué se eleva la triptasa sérica durante la anafilaxia y qué la desencadena?", "answer": "Por degranulación de mastocitos, desencadenada por unión de alérgeno a IgE."},
+    {"question": "¿Por qué es útil medir la triptasa sérica para el diagnóstico de anafilaxia en comparación con la histamina?", "answer": "Permanece en circulación más tiempo que la histamina."},
+    {"question": "¿Qué confirma niveles elevados de triptasa sérica en el contexto de la anafilaxia y por qué es importante?", "answer": "Activación sistémica de mastocitos; clave para diagnóstico preciso."},
+    {"question": "¿Cuál es la función del C1-inhibidor (C1-INH) en la vía clásica del complemento?", "answer": "Inhibe C1r y C1s, evitando la activación del complejo C1 y formación de MAC."},
+    {"question": "¿Cómo regula el C1-INH la vía de las lectinas y qué efectos previene?", "answer": "Inhibe MASP-1 y MASP-2; previene opsonización, lisis de células, e inflamación."},
+    {"question": "¿Qué efectos proinflamatorios reduce el C1-INH en las vías del complemento?", "answer": "Reduce C3a y C5a, disminuyendo vasodilatación, permeabilidad e inflamación."},
+    {"question": "¿Qué provoca la deficiencia de C1-INH y qué condición inflamatoria puede resultar?", "answer": "Activación descontrolada del complemento; angioedema hereditario."},
+    {"question": "¿Cómo contribuye la deficiencia de C1-INH al desarrollo del angioedema hereditario (AEH)?", "answer": "Impide regulación del complemento y del sistema de contacto; aumenta bradicinina."},
+    {"question": "¿Qué efectos tiene la bradicinina en los vasos sanguíneos y cómo afecta en el angioedema hereditario?", "answer": "Dilata arteriolas y aumenta permeabilidad capilar; causa inflamación y edema."},
+    {"question": "¿Qué papel juega la calicreína plasmática en la generación de bradicinina?", "answer": "Convierte cininógeno de alto peso molecular en bradicinina, un vasodilatador."},
+    {"question": "¿Cómo afecta la falta de C1-INH a la calicreína en AEH, y qué síntomas provoca?", "answer": "Inhibición insuficiente de calicreína; episodios de angioedema recurrente."},
+    {"question": "¿Por qué el angioedema hereditario (AEH) no provoca urticaria, a diferencia de las alergias?", "answer": "Mediado por bradicinina, no por histamina; mastocitos no participan."},
+    {"question": "¿Cuál es el papel de las células NK (Natural Killer) en la vigilancia inmunológica?", "answer": "Identifican y eliminan células infectadas o malignas sin moléculas MHC."},
+    {"question": "¿Qué PAMPs específicos presentan las bacterias Gram-negativas y cómo son importantes para la respuesta inmune?", "answer": "Lipopolisacáridos (LPS), esenciales para el reconocimiento inmune."},
+    {"question": "¿Cuáles son los PAMPs presentes en bacterias Gram-positivas y hongos, respectivamente?", "answer": "Ácidos lipoteicoicos y glicolípidos en Gram-positivas; mananos y glucanos en hongos."},
+    {"question": "¿Cuál es la función general de los PAMPs en la respuesta inmunitaria?", "answer": "Permiten al sistema inmune identificar y responder a microorganismos."},
+    {"question": "¿Qué son los DAMPs y cuál es su papel en la respuesta inmunitaria?", "answer": "Moléculas liberadas por células dañadas; señalizan para iniciar inflamación y reparación."},
+    {"question": "Menciona dos ejemplos de DAMPs y las situaciones en las que se liberan.", "answer": "Proteínas de choque térmico (estrés térmico) y cristales de urato monosódico (gota)."},
+    {"question": "¿Qué son los PAMPs y cómo difieren de los DAMPs en cuanto a su origen y función?", "answer": "Patrones moleculares de patógenos; difieren porque los DAMPs son endógenos y no microbianos."},
+    {"question": "¿Cómo se diferencia la inflamación causada por PAMPs de la causada por DAMPs?", "answer": "PAMPs están relacionados con infecciones; DAMPs con daño o estrés celular."},
+    {"question": "¿Puede toda inflamación o fiebre ser atribuida a infecciones? Proporciona un ejemplo contrario.", "answer": "No; ejemplos incluyen gota y cáncer."},
+    {"question": "¿Qué pueden causar el cáncer y las enfermedades autoinmunes en ausencia de patógenos?", "answer": "Fiebre e inflamación por respuestas inmunitarias anómalas."},
+{"question": "¿Dónde se encuentran los Receptores de Reconocimiento de Patrones (PRR) en las células y qué reconocen?", "answer": "En la membrana plasmática o compartimentos intracelulares; reconocen patógenos y señales de daño."},
+    {"question": "¿Qué patógenos reconocen los PRR y qué señales no infecciosas también detectan?", "answer": "Reconocen patógenos extracelulares e intracelulares y señales de daño celular."},
+    {"question": "¿Cuál es la función de los receptores tipo Toll (TLR) y dónde se localizan en las células?", "answer": "Reconocen patógenos extracelulares y ácidos nucleicos de patógenos intracelulares."},
+    {"question": "¿Cuál es la función del dominio extracelular de los TLR y cómo se relaciona con la detección de PAMPs y DAMPs?", "answer": "Contiene repeticiones de leucinas para el reconocimiento de PAMPs y DAMPs."},
+    {"question": "¿Cómo contribuye el dominio transmembrana de los TLR a su función en la detección de patógenos?", "answer": "Ancla los TLR a la membrana celular, facilitando su ubicación en sitios clave."},
+    {"question": "¿Qué papel desempeña el dominio intracelular (TIR) de los TLR en la respuesta inmune del organismo?", "answer": "Transmite señales al núcleo para activar genes inflamatorios y de respuesta inmune."},
+    {"question": "¿Cómo responden los macrófagos a las partículas de carbono inhaladas en las minas de carbón, y qué se reconocen como?", "answer": "Reconocen las partículas de carbono como DAMPs, activando una respuesta inflamatoria."},
+    {"question": "¿Qué efecto tiene la exposición crónica a partículas de carbono en los macrófagos y cómo contribuye al desarrollo de enfermedades?", "answer": "Activa persistentemente a los macrófagos, contribuyendo a la neumoconiosis."},
+    {"question": "¿Qué tipos de microorganismos intracelulares existen y cuáles son ejemplos específicos de estos?", "answer": "Virus (Influenza, VIH), bacterias (Mycobacterium tuberculosis), parásitos (Plasmodium spp., Leishmania)."},
+    {"question": "¿Cómo infectan los virus intracelulares como el de la Influenza y el VIH a las células del huésped?", "answer": "Infectan células específicas, evadiendo el sistema inmunitario."},
+    {"question": "¿Cuáles son algunos ejemplos de microorganismos extracelulares y en qué entorno crecen?", "answer": "Bacterias, hongos, parásitos; crecen en el entorno extracelular."},
+    {"question": "¿Cómo causan enfermedades los microorganismos extracelulares sin invadir células huésped?", "answer": "Provocan infecciones en tejidos y fluidos del huésped."},
+    {"question": "¿Qué es MyD88 (Myeloid Differentiation Primary Response 88) y cuál es su función principal en la señalización del sistema inmune innato al unirse al dominio intracelular de los TLR (receptores tipo Toll) cuando detectan un PAMP, como el LPS de bacterias gram-negativas?", "answer": "MyD88 es un adaptador que transmite señales del TLR al activar genes inflamatorios."},
+    {"question": "Aunque MyD88 es el adaptador principal en la señalización de los TLRs, ¿qué otros adaptadores existen, como TRIF (TIR-domain-containing adapter-inducing interferon-β) y TIRAP (TIR domain-containing adapter protein), que participan en la señalización de diferentes TLRs?", "answer": "TRIF y TIRAP."},
+    {"question": "¿Qué proceso desencadena MyD88 al unirse a los TLR activados, resultando en la activación de genes inflamatorios y de respuesta inmune para combatir infecciones?", "answer": "Activa una cascada de señalización."},
+{"question": "¿Cómo transmite el adaptador MyD88 la señal del TLR a la quinasa IRAK (Interleukin-1 Receptor-Associated Kinase), que se activa y fosforila otras proteínas, desencadenando una cascada de señalización que amplifica la respuesta inmune?", "answer": "MyD88 activa IRAK, que fosforila proteínas."},
+    {"question": "¿Qué es NF-κB y cómo se encuentra regulado normalmente en el citoplasma al estar unido a la proteína inhibidora IκB?", "answer": "Un factor de transcripción inactivo unido a IκB."},
+    {"question": "¿Cómo la señalización activada por MyD88 e IRAK fosforila IκB, causando su degradación y permitiendo que NF-κB se transloque al núcleo para activar genes proinflamatorios y de citoquinas?", "answer": "Fosforilación de IκB libera NF-κB al núcleo."},
+    {"question": "¿Qué tipo de moléculas detecta TLR4, como los lipopolisacáridos (LPS), presentes en la membrana de bacterias gram-negativas?", "answer": "Detecta LPS de bacterias gram-negativas."},
+    {"question": "¿Qué reconoce TLR5 en relación con la flagelina, la proteína estructural de los flagelos bacterianos?", "answer": "Reconoce flagelina bacteriana."},
+    {"question": "¿Qué tipo de material genético identifica TLR9, como el ADN no metilado, característico de bacterias y virus?", "answer": "Identifica ADN no metilado."},
+    {"question": "¿Dónde se localizan predominantemente los receptores Scavenger en las células del sistema inmune, como los macrófagos, y qué función desempeñan en el reconocimiento y eliminación de células envejecidas, lipoproteínas oxidadas, y algunos microorganismos?", "answer": "En macrófagos; eliminan células envejecidas y LDL oxidadas."},
+    {"question": "¿Qué tipo de moléculas identifican los receptores Scavenger, como las LDL oxidadas, que son propensas a acumularse en las paredes de los vasos sanguíneos y causar daño vascular?", "answer": "LDL oxidadas."},
+    {"question": "¿Cómo afectan los macrófagos sobrecargados de LDL oxidadas a la salud vascular y qué tipo de células se forman que contribuyen a la formación de placas ateromatosas?", "answer": "Células espumosas."},
+    {"question": "¿Dónde se encuentran los receptores NOD (Nucleotide-binding Oligomerization Domain-like Receptors) en las células inmunitarias y cuál es su función principal en la detección de patógenos intracelulares?", "answer": "Citoplasma; detectan patógenos."},
+    {"question": "¿Qué dominios contienen los receptores NOD que les permiten interactuar con otros componentes, como los NLRPs (NOD-like Receptor Pyrin domain-containing proteins)?", "answer": "Dominios CARD."},
+    {"question": "¿Qué tipo de patógenos intracelulares reconocen los receptores NOD, particularmente las bacterias, y cómo contribuyen a la activación de respuestas inflamatorias para defender al organismo?", "answer": "Bacterias; activan inflamación."},
+    {"question": "¿Qué componente bacteriano específico, presente en bacterias gram-negativas, es reconocido por NOD1 y cómo contribuye a la respuesta inmune?", "answer": "Meso-diaminopimélico ácido."},
+    {"question": "¿Qué detecta NOD2 en el contexto de componentes bacterianos, como el muramil dipéptido (MDP), presente en la mayoría de las bacterias gram-positivas y gram-negativas?", "answer": "Muramil dipéptido."},
+{"question": "¿Qué activan los receptores NOD a través de una cascada de señalización que lleva a la activación de NF-κB (Factor Nuclear kappa B)?", "answer": "Activan NF-κB."},
+    {"question": "¿Qué es NF-κB y cómo induce la producción de citocinas proinflamatorias, como IL-1, IL-6 y TNF-α, promoviendo la respuesta inmune?", "answer": "Factor de transcripción; induce IL-1, IL-6, TNF-α."},
+    {"question": "¿En qué enfermedades inflamatorias intestinales, como la enfermedad de Crohn, están implicados los receptores NOD, especialmente NOD2, y cómo se describe esta condición?", "answer": "Enfermedad de Crohn; EII crónica."},
+    {"question": "¿Cómo la activación inadecuada de los receptores NOD y PRRs como los TLRs activa NF-κB y otros factores de transcripción, promoviendo la producción de citocinas proinflamatorias (TNF-α, IL-1β, IL-6, IL-12)?", "answer": "Activa NF-κB; produce citocinas."},
+    {"question": "¿Cómo las citocinas proinflamatorias generadas por NOD generan una respuesta inflamatoria sostenida que daña la mucosa intestinal y causa síntomas de la enfermedad de Crohn, como dolor abdominal, diarrea crónica, pérdida de peso y fatiga?", "answer": "Dañan la mucosa intestinal."},
+    {"question": "¿Qué es el inflamasoma y cómo se forma por la unión de receptores NOD con proteínas NLRP?", "answer": "Complejo de NOD y NLRP."},
+    {"question": "¿Qué son los receptores RIG-I-Like (RLR), dónde se localizan en el citoplasma y qué tipo de material genético reconocen?", "answer": "Receptores citoplasmáticos; reconocen ARN de doble cadena."},
+    {"question": "¿Qué detectan los receptores RIG-I-Like (RLR) en relación con el ARN viral, especialmente cuando el virus libera su material genético en la célula hospedadora?", "answer": "Detectan ARN viral."},
+    {"question": "¿Qué inducen los receptores RLR en la respuesta inmune antiviral, siendo esenciales en esta respuesta?", "answer": "Producción de interferones (IFN)."},
+    {"question": "¿Qué es el receptor cGAS-STING, cómo detecta el ADN citosólico indicativo de daño celular o infección, y qué contiene para activarse ante ADN anómalo?", "answer": "Receptor intracelular; detecta ADN citosólico."},
+    {"question": "¿Qué tipo de ADN reconoce el receptor cGAS-STING, ya sea propio dañado (por envejecimiento o estrés celular) o de patógenos?", "answer": "ADN propio dañado y de patógenos."},
+    {"question": "¿Qué produce la activación de cGAS-STING en respuesta a infecciones bacterianas, como las causadas por Mycobacterium tuberculosis?", "answer": "Interferones."},
+    {"question": "¿Qué tienen en común los receptores NOD, RIG-I y cGAS-STING en cuanto a su localización celular?", "answer": "Son intracelulares."},
+    {"question": "¿Qué papel desempeñan los receptores Scavengers en la eliminación de células envejecidas y lipoproteínas oxidadas y en qué tipo de procesos también participan?", "answer": "Eliminan células; participan en inflamación crónica."},
+    {"question": "¿Qué función desempeñan los receptores NOD y el inflamasoma en la respuesta contra patógenos intracelulares y en la inflamación, y con qué enfermedades están asociados?", "answer": ""},
+{"question": "¿Qué función desempeñan los receptores NOD y el inflamasoma en la respuesta contra patógenos intracelulares y en la inflamación, y con qué enfermedades están asociados?", "answer": "Respuesta a patógenos; enfermedades inflamatorias intestinales."},
+    {"question": "¿Qué detectan los receptores RIG-I y cGAS-STING y qué tipo de respuestas activan?", "answer": "Detectan material genético anómalo; activan respuestas antivirales y antibacterianas."},
+    {"question": "¿Cuál es el objetivo principal del inflamasoma en el procesamiento de pro-citoquinas inflamatorias, especialmente la interleucina 1β (IL-1β)?", "answer": "Activación de caspasa 1."},
+    {"question": "¿Qué detectan los receptores NOD y con qué se asocian para formar el inflamasoma?", "answer": "Detectan PAMPs/DAMPs; se asocian con NLRP."},
+    {"question": "¿Qué consecuencia tiene la formación del inflamasoma en la activación de caspasa 1, una enzima crucial en la respuesta inflamatoria?", "answer": "Activa caspasa 1."},
+    {"question": "¿Qué proceso realiza caspasa 1 al procesar pro-IL-1β, y qué propiedades tiene la IL-1β resultante?", "answer": "Procesa pro-IL-1β en IL-1β; propiedades proinflamatorias."},
+    {"question": "¿Qué es la piroptosis y cómo se relaciona con la activación del inflamasoma en la respuesta inflamatoria?", "answer": "Muerte celular inflamatoria."},
+    {"question": "¿Qué tipos de señales o moléculas detecta el inflamasoma, como los DAMPs (moléculas propias que indican daño celular) y los PAMPs (moléculas de patógenos)?", "answer": "Detecta DAMPs y PAMPs."},
+    {"question": "¿Qué ejemplos de DAMPs son reconocidos por el inflamasoma, incluidos cristales de urato, asbesto, partículas de carbón y otros contaminantes ambientales?", "answer": "Cristales de urato, asbesto, partículas de carbón."},
+    {"question": "¿Qué tipo de componentes microbianos, presentes en infecciones bacterianas y virales, son detectados por el inflamasoma como PAMPs?", "answer": "Componentes microbianos."},
+    {"question": "¿Cómo se vincula la producción de citocinas proinflamatorias, como IL-1β, a la fiebre y otros síntomas de inflamación?", "answer": "Induce fiebre y síntomas inflamatorios."},
+    {"question": "¿Qué son los péptidos antimicrobianos (AMPs), quién los produce y cuál es su función principal en el sistema inmune?", "answer": "Pequeñas proteínas; destruyen microbios."},
+    {"question": "¿Cómo actúan los AMPs como una primera línea de defensa contra bacterias, virus y hongos?", "answer": "Destruyen o inhiben crecimiento."},
+    {"question": "¿Cómo interfieren los péptidos antimicrobianos (AMPs) con la membrana celular de los patógenos y cuál es su papel en la regulación bacteriana en piel y mucosas?", "answer": "Lisan patógenos; regulan bacterias."},
+    {"question": "¿Qué sucede en la fase de inflamación tras una lesión y cuál es el papel de los leucocitos y las plaquetas en esta fase inicial de reparación?", "answer": "Plaquetas detienen sangrado; leucocitos eliminan bacterias."},
+    {"question": "¿Qué ocurre durante la fase de proliferación en el proceso de reparación del tejido, y qué componentes son producidos por los fibroblastos?", "answer": "Forman tejido de granulación; producen colágeno."},
+    {"question": "¿Qué objetivo tiene la fase de remodelación en la reparación del tejido y cuánto tiempo puede durar este proceso?", "answer": "Reorganiza colágeno; meses o años."},
+    {"question": "¿Qué función tienen las selectinas (L-selectina, E-selectina, P-selectina) en la adhesión de leucocitos al endotelio vascular activado?", "answer": "Facilitan adhesión inicial."},
+    {"question": "¿Cómo interactúan la L-selectina en leucocitos y las E- y P-selectinas en células endoteliales durante la migración de leucocitos hacia los tejidos inflamados?", "answer": "L-selectina se une a E- y P-selectinas."},
+    {"question": "¿Qué son las integrinas (como LFA-1 y MAC-1), y cómo aseguran una adhesión firme de los leucocitos a las células endoteliales?", "answer": "Moléculas de adhesión; activadas por quimioatrayentes."},
+    {"question": "¿Con qué ligandos se unen las integrinas en el endotelio para permitir la detención de los leucocitos y su extravasación hacia los sitios de inflamación?", "answer": "ICAM-1 y VCAM-1."},
+    {"question": "¿Qué ocurre durante la fase de marginación y rodadura de los leucocitos en respuesta a citocinas proinflamatorias como TNF-α e IL-1?", "answer": "Leucocitos se desplazan hacia la pared del vaso."},
+    {"question": "¿Cómo interactúan las selectinas en el endotelio con ligandos glucídicos en los leucocitos durante la rodadura sobre la superficie del endotelio?", "answer": "Selectinas interactúan con ligandos; leucocitos ruedan."},
+    {"question": "¿Qué ocurre en la fase de adhesión firme con las integrinas en los leucocitos, y cómo cambia su afinidad por los ligandos endoteliales?", "answer": ""},
+{"question": "¿Qué ocurre en la fase de adhesión firme con las integrinas en los leucocitos, y cómo cambia su afinidad por los ligandos endoteliales?", "answer": "Cambian a alta afinidad."},
+    {"question": "¿Cómo las integrinas activadas aseguran la adhesión de los leucocitos al endotelio después de detener su rodadura?", "answer": "Se unen a ICAM-1 y VCAM-1."},
+    {"question": "¿Qué es la transmigración o diapédesis y cómo cruzan los leucocitos el endotelio durante este proceso?", "answer": "Atraviesan uniones intercelulares o transcelularmente."},
+    {"question": "¿Qué moléculas facilitan el paso de los leucocitos a través de la barrera endotelial durante la transmigración?", "answer": "PECAM-1, JAM-A, CD99."},
+    {"question": "¿Qué sucede en la fase de migración en el tejido y cómo se mueven los leucocitos hacia el sitio de infección o daño?", "answer": "Siguen gradiente quimiotáctico."},
+    {"question": "¿Qué utilizan los leucocitos para avanzar en el tejido subendotelial y facilitar su movimiento a través de la matriz extracelular?", "answer": "Integrinas, quimioquinas, metaloproteinasas."},
+    {"question": "¿Cuáles son los primeros leucocitos en migrar al sitio de inflamación aguda y qué papel desempeñan?", "answer": "Neutrófilos; fagocitan patógenos."},
+    {"question": "¿Qué sucede con los monocitos después de llegar al sitio de inflamación y en qué se diferencian?", "answer": "Se diferencian en macrófagos."},
+    {"question": "¿Qué linfocitos migran a sitios de inflamación crónica y qué función desempeñan en la respuesta inmune adaptativa?", "answer": "Linfocitos T y B; reconocen antígenos."},
+    {"question": "¿Qué rol desempeñan los neutrófilos en la respuesta inicial de inflamación aguda contra infecciones?", "answer": "Fagocitosis y liberación de sustancias tóxicas."},
+    {"question": "¿Qué funciones desempeñan los macrófagos derivados de monocitos en la inflamación y reparación tisular?", "answer": "Eliminan restos celulares; secretan citocinas."},
+    {"question": "¿Cómo proporcionan los linfocitos inmunidad específica a largo plazo al migrar en respuesta a quimioquinas?", "answer": "Activan mecanismos citotóxicos y producen anticuerpos."},
+    {"question": "¿Cómo regula el C1-Inhibidor (C1-INH) las vías clásica y de las lectinas del complemento, y qué enfermedad causa su deficiencia?", "answer": "Inactiva C1r, C1s, MASP-2; angioedema hereditario."},
+    {"question": "¿Qué función tiene el Factor H en la regulación de la vía alternativa del complemento?", "answer": "Inactiva C3b; previene activación."},
+    {"question": "¿Cuál es el papel del Factor I en la regulación de las vías clásica y alternativa del complemento?", "answer": "Inactiva C3b y C4b."},
+    {"question": "¿Qué hacen la Proteína S (Vitronectina) y la Clústerina en la regulación del complemento?", "answer": "Inhiben formación del MAC."},
+{"question": "¿Cómo protege CD55 (DAF) a las células propias contra la opsonización y lisis mediada por el complemento?", "answer": "Disocia convertasas de C3."},
+    {"question": "¿Qué función cumple CD59 (Protectina) en la prevención de la lisis celular mediada por el complemento?", "answer": "Bloquea formación de MAC."},
+    {"question": "¿Cómo actúa MCP (Membrane Cofactor Protein, CD46) en la regulación del complemento?", "answer": "Cofactor para Factor I."},
+    {"question": "¿Cuál es la función de CR1 (Complement Receptor 1, CD35) en la eliminación de complejos inmunes y la regulación del complemento?", "answer": "Elimina complejos inmunes; inactiva C3b y C4b."},
+    {"question": "¿Qué papel juegan los reguladores solubles del complemento como C1-INH, Factor H, Factor I, Proteína S y Clústerina en la prevención de la activación inadecuada y la inflamación excesiva?", "answer": "Previenen activación inadecuada."},
+    {"question": "¿Cómo protegen los reguladores de superficie celular como CD55, CD59, MCP y CR1 a las células propias y contribuyen a la eliminación de complejos inmunes?", "answer": "Protegen de lisis; eliminan complejos inmunes."},
+    {"question": "¿Qué citocinas proinflamatorias producen los macrófagos, mastocitos y células dendríticas, y cuál es su efecto en la fiebre, células endoteliales y proteínas de fase aguda?", "answer": "TNF-α, IL-1, IL-6; inducen fiebre y activan endotelio."},
+    {"question": "¿Qué funciones tienen las quimioquinas CXCL8 (IL-8) y CCL2 (MCP-1) en la respuesta inmune?", "answer": "Atraen leucocitos al sitio de inflamación."},
+    {"question": "¿Qué efectos tienen las prostaglandinas (PGE2) y leucotrienos (LTB4) en la amplificación de la inflamación?", "answer": "Vasodilatación, permeabilidad vascular, quimiotaxis."},
+    {"question": "¿Cuál es el papel central de TNF-α en la respuesta inflamatoria aguda?", "answer": "Promueve adhesión y extravasación de leucocitos."},
+    {"question": "¿Cómo contribuyen IL-1 e IL-6 a la inflamación sistémica y el desarrollo de fiebre?", "answer": "Estimulan proteínas de fase aguda."},
+    {"question": "¿Cómo intensifican las prostaglandinas y leucotrienos la inflamación local?", "answer": "Aumentan permeabilidad y atraen células inmunitarias."}
+]
+;
+    let currentFlashcardIndex = 0;
+
+    function startFlashcards() {
+        const container = document.getElementById('flashcardContainer');
+        if (container.requestFullscreen) {
+            container.requestFullscreen();
+        } else if (container.mozRequestFullScreen) { // Firefox
+            container.mozRequestFullScreen();
+        } else if (container.webkitRequestFullscreen) { // Chrome, Safari and Opera
+            container.webkitRequestFullscreen();
+        } else if (container.msRequestFullscreen) { // IE/Edge
+            container.msRequestFullscreen();
+        }
+
+        document.getElementById('startButton').style.display = 'none'; // Ocultar botón de inicio
+        showFlashcard();
+    }
+
+    function showFlashcard() {
+        if (flashcards.length === 0) return;
+        const flashcardInner = document.querySelector('.flashcard-inner');
+        const frontContent = flashcardInner.querySelector('.front');
+        const backContent = flashcardInner.querySelector('.back');
+        const controlsElement = document.querySelector('.controls');
+        
+        flashcardInner.classList.remove('flipped'); // Reiniciar la posición
+        frontContent.textContent = flashcards[currentFlashcardIndex].question;
+        backContent.textContent = flashcards[currentFlashcardIndex].answer;
+
+        document.getElementById('flashcard').style.display = 'flex';
+        controlsElement.style.display = 'flex';
+
+        flashcardInner.onclick = function() {
+            flashcardInner.classList.toggle('flipped');
+        };
+    }
+
+    function prevFlashcard() {
+        if (currentFlashcardIndex > 0) {
+            currentFlashcardIndex--;
+            showFlashcard();
+        }
+    }
+
+    function nextFlashcard() {
+        if (currentFlashcardIndex < flashcards.length - 1) {
+            currentFlashcardIndex++;
+            showFlashcard();
+        }
+    }
+</script>
+
+</body>
+</html>
